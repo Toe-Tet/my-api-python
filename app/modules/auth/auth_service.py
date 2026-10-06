@@ -1,16 +1,16 @@
 from app.core.exceptions.app_exception import AppException
+from app.core.tenancy import (
+    tenant_migration_manager,
+    tenant_store,
+    tenancy_manager,
+)
 from app.core.services.jwt_service import jwt_service
 from app.core.services.tenant_service import tenant_service
-from app.data.models.tenant import Tenant
 from app.data.models.user import User
 from app.modules.auth.dtos import LoginUserPayload, RegisterUserPayload
-from sqlalchemy import func
+from fastapi_tenancy.core.exceptions import TenantNotFoundError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
@@ -26,7 +26,7 @@ class AuthService:
     ):
         """Register a new user."""
         normalized_tenant_name = register_user_payload.tenant_name.strip()
-        tenant_database_name = tenant_service.build_tenant_database_name(
+        tenant_identifier = tenant_service.build_tenant_identifier(
             normalized_tenant_name
         )
 
@@ -41,35 +41,24 @@ class AuthService:
                 status_code=422,
             )
 
-        tenant_result = await session.exec(
-            select(Tenant).where(
-                func.lower(Tenant.name) == normalized_tenant_name.lower()
-            )
-        )
-        existing_tenant = tenant_result.first()
-
-        if existing_tenant:
+        try:
+            await tenant_store.get_by_identifier(tenant_identifier)
             raise AppException(
                 message="Tenant name already exists",
                 status_code=422,
             )
+        except TenantNotFoundError:
+            pass
 
-        if await tenant_service.tenant_database_exists(tenant_database_name):
-            raise AppException(
-                message="Tenant database already exists",
-                status_code=422,
-            )
-
-        database_created = False
+        tenant_id: str | None = None
 
         try:
-            await tenant_service.create_tenant_database(tenant_database_name)
-            database_created = True
-            await tenant_service.run_tenant_migrations(tenant_database_name)
-
-            tenant = Tenant(name=normalized_tenant_name)
-            session.add(tenant)
-            await session.flush()
+            tenant = await tenancy_manager.register_tenant(
+                identifier=tenant_identifier,
+                name=normalized_tenant_name,
+            )
+            tenant_id = tenant.id
+            await tenant_migration_manager.upgrade_tenant(tenant)
 
             user = User(
                 username=register_user_payload.username,
@@ -82,40 +71,16 @@ class AuthService:
             await session.commit()
             await session.refresh(user)
             return user
-        # except AppException:
-        #     await session.rollback()
+        except Exception as exception:
+            await tenant_service.rollback_failed_registration(session, tenant_id)
 
-        #     if database_created:
-        #         await _cleanup_tenant_database(tenant_database_name)
+            if isinstance(exception, AppException):
+                raise
 
-        #     raise
-        # except SQLAlchemyError:
-        #     await session.rollback()
-
-        #     if database_created:
-        #         await _cleanup_tenant_database(tenant_database_name)
-
-        #     logger.exception(
-        #         "Failed to register user for tenant '%s'", normalized_tenant_name
-        #     )
-        #     raise AppException(
-        #         message="Unable to register user",
-        #         status_code=500,
-        #     )
-        except Exception:
-            await session.rollback()
-
-            if database_created:
-                await tenant_service.cleanup_tenant_database(tenant_database_name)
-
-            logger.exception(
-                "Failed to provision tenant database '%s'",
-                tenant_database_name,
-            )
-            raise AppException(
-                message="Unable to create tenant database",
-                status_code=500,
-            )
+            raise tenant_service.build_register_exception(
+                exception,
+                tenant_identifier,
+            ) from exception
 
     async def login_user(
         self,

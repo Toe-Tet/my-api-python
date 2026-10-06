@@ -2,6 +2,8 @@ from math import ceil
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from fastapi_tenancy.core.types import Tenant as CurrentTenant
+from fastapi_tenancy.dependencies import get_current_tenant
 from app.core.response import (
     PaginatedResponse,
     PaginationMeta,
@@ -27,9 +29,10 @@ user_router = APIRouter(prefix="/users", tags=["users"])
 )
 async def get_users(
     session: Annotated[AsyncSession, Depends(get_session)],
+    tenant: Annotated[CurrentTenant, Depends(get_current_tenant)],
     query: Annotated[GetUsersQuery, Depends()],
 ):
-    users, total_items = await user_service.get_users(session, query)
+    users, total_items = await user_service.get_users(session, tenant.id, query)
     total_pages = ceil(total_items / query.size) if total_items else 0
 
     return response(

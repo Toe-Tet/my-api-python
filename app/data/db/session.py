@@ -4,6 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+import app.data.models  # noqa: F401
 
 
 engine = create_async_engine(

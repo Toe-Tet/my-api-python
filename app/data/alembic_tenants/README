@@ -3,8 +3,8 @@ Tenant-specific Alembic migrations.
 Generate a manual migration:
 - `uv run alembic -c alembic_tenants.ini revision -m "message"`
 
-Upgrade all tenant databases from the shared `tenants` table:
-- `uv run alembic -c alembic_tenants.ini upgrade head`
+Upgrade all tenant databases through fastapi-tenancy:
+- `uv run python migrate_tenants.py upgrade head`
 
-Upgrade one tenant database directly:
-- `uv run alembic -c alembic_tenants.ini -x tenant_db=tenant_example upgrade head`
+Downgrade all tenant databases:
+- `uv run python migrate_tenants.py downgrade -1`

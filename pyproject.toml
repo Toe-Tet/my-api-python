@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
+    "fastapi-tenancy[migrations,postgres]>=0.4.0",
     "fastapi[standard]>=0.142.1",
     "greenlet>=3.5.6",
     "psycopg[binary]",

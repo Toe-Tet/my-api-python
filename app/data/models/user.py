@@ -56,7 +56,8 @@ class User(SQLModel, table=True):
         },
     )
 
-    tenant_id: int = Field(
+    tenant_id: str = Field(
         nullable=False,
         foreign_key="tenants.id",
+        max_length=255,
     )

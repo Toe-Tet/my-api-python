@@ -8,8 +8,7 @@ class Settings(BaseSettings):
     DATABASE_USER: str
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
-    TENANT_DATABASE_PREFIX: str = "tenant_"
-    TENANT_DATABASE_MAINTENANCE_DB: str = "postgres"
+    TENANCY_TENANT_HEADER_NAME: str = "X-Tenant-ID"
 
     JWT_SECRET: str
     JWT_EXPIRES_IN: int
@@ -34,8 +33,8 @@ class Settings(BaseSettings):
         return self.build_database_uri(self.DATABASE_NAME)
 
     @property
-    def SQLALCHEMY_TENANT_DATABASE_URI(self) -> str:
-        return self.build_database_uri(self.TENANT_DATABASE_MAINTENANCE_DB)
+    def SQLALCHEMY_TENANT_DATABASE_URL_TEMPLATE(self) -> str:
+        return self.build_database_uri("{database_name}")
 
 
 settings = Settings()
