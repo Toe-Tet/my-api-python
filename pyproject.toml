@@ -6,14 +6,16 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
+    "fastapi[standard]>=0.142.1",
+    "greenlet>=3.5.6",
     "psycopg[binary]",
+    "pwdlib[argon2]>=0.3.1",
     "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.1",
     "sqlalchemy>=2.0.54",
     "sqlmodel>=0.0.47",
+    "structlog>=26.1.0",
 ]
-
-[project.scripts]
-my-api = "app:main"
 
 [tool.uv.build-backend]
 module-name = "app"

@@ -1,11 +1,15 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     DATABASE_HOST: str
     DATABASE_PORT: int = 5432
     DATABASE_USER: str
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
+
+    JWT_SECRET: str
+    JWT_EXPIRES_IN: int
 
     model_config = SettingsConfigDict(
         env_file=".env",
