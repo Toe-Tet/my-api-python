@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -7,6 +8,8 @@ class Settings(BaseSettings):
     DATABASE_USER: str
     DATABASE_PASSWORD: str
     DATABASE_NAME: str
+    TENANT_DATABASE_PREFIX: str = "tenant_"
+    TENANT_DATABASE_MAINTENANCE_DB: str = "postgres"
 
     JWT_SECRET: str
     JWT_EXPIRES_IN: int
@@ -16,16 +19,23 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    def build_database_uri(self, database_name: str) -> str:
+        return URL.create(
+            drivername="postgresql+psycopg",
+            username=self.DATABASE_USER,
+            password=self.DATABASE_PASSWORD,
+            host=self.DATABASE_HOST,
+            port=self.DATABASE_PORT,
+            database=database_name,
+        ).render_as_string(hide_password=False)
+
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> str:
-        return (
-            f"postgresql+psycopg://"
-            f"{self.DATABASE_USER}:"
-            f"{self.DATABASE_PASSWORD}@"
-            f"{self.DATABASE_HOST}:"
-            f"{self.DATABASE_PORT}/"
-            f"{self.DATABASE_NAME}"
-        )
+        return self.build_database_uri(self.DATABASE_NAME)
+
+    @property
+    def SQLALCHEMY_TENANT_DATABASE_URI(self) -> str:
+        return self.build_database_uri(self.TENANT_DATABASE_MAINTENANCE_DB)
 
 
 settings = Settings()

@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator, Field
 
 
 class RegisterUserPayload(BaseModel):
+    tenant_name: str = Field(min_length=3, max_length=50, example="tenant1")
     username: str = Field(min_length=3, max_length=50, example="john_doe123")
     email: EmailStr = Field(min_length=3, max_length=50, example="john.doe@example.com")
     phone: str = Field(pattern=r"^\+[1-9]\d{7,14}$", example="+1234567890")

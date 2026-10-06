@@ -1,46 +1,39 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, String
-from sqlmodel import Field, SQLModel
+from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlmodel import Field
+
+from app.data.models.tenants.base import TenantSQLModel
 
 
-class User(SQLModel, table=True):
-    __tablename__ = "users"
+class Farmer(TenantSQLModel, table=True):
+    __tablename__ = "farmers"
 
     id: int | None = Field(
         default=None,
         primary_key=True,
     )
 
-    username: str = Field(
+    farm_id: int = Field(
+        sa_column=Column(
+            ForeignKey("farms.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+    )
+
+    full_name: str = Field(
         sa_column=Column(
             String(100),
             nullable=False,
         )
     )
 
-    email: str = Field(
+    phone: str | None = Field(
+        default=None,
         sa_column=Column(
-            String(255),
-            unique=True,
-            nullable=False,
-        )
-    )
-
-    phone: str = Field(
-        sa_column=Column(
-            String(255),
-            nullable=False,
-        )
-    )
-
-    password: str = Field(
-        max_length=255,
-        nullable=False,
-    )
-
-    is_active: bool = Field(
-        default=True,
+            String(50),
+            nullable=True,
+        ),
     )
 
     created_at: datetime = Field(
@@ -54,9 +47,4 @@ class User(SQLModel, table=True):
         sa_column_kwargs={
             "onupdate": lambda: datetime.now(timezone.utc),
         },
-    )
-
-    tenant_id: int = Field(
-        nullable=False,
-        foreign_key="tenants.id",
     )

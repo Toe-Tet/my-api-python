@@ -1,0 +1,10 @@
+Tenant-specific Alembic migrations.
+
+Generate a manual migration:
+- `uv run alembic -c alembic_tenants.ini revision -m "message"`
+
+Upgrade all tenant databases from the shared `tenants` table:
+- `uv run alembic -c alembic_tenants.ini upgrade head`
+
+Upgrade one tenant database directly:
+- `uv run alembic -c alembic_tenants.ini -x tenant_db=tenant_example upgrade head`

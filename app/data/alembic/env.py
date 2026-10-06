@@ -5,7 +5,8 @@ from sqlalchemy import pool
 from sqlmodel import SQLModel
 
 from alembic import context
-import app.data.models  # noqa: F401
+import app.data.models.tenant  # noqa: F401
+import app.data.models.user  # noqa: F401
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

@@ -4,39 +4,20 @@ from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
 
-class User(SQLModel, table=True):
-    __tablename__ = "users"
+class Tenant(SQLModel, table=True):
+    __tablename__ = "tenants"
 
     id: int | None = Field(
         default=None,
         primary_key=True,
     )
 
-    username: str = Field(
+    name: str = Field(
         sa_column=Column(
             String(100),
-            nullable=False,
-        )
-    )
-
-    email: str = Field(
-        sa_column=Column(
-            String(255),
             unique=True,
             nullable=False,
         )
-    )
-
-    phone: str = Field(
-        sa_column=Column(
-            String(255),
-            nullable=False,
-        )
-    )
-
-    password: str = Field(
-        max_length=255,
-        nullable=False,
     )
 
     is_active: bool = Field(
@@ -54,9 +35,4 @@ class User(SQLModel, table=True):
         sa_column_kwargs={
             "onupdate": lambda: datetime.now(timezone.utc),
         },
-    )
-
-    tenant_id: int = Field(
-        nullable=False,
-        foreign_key="tenants.id",
     )
