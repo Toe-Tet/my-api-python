@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, String, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("email", "tenant_id", name="uq_users_email_tenant_id"),
+    )
 
     id: int | None = Field(
         default=None,
@@ -22,7 +25,6 @@ class User(SQLModel, table=True):
     email: str = Field(
         sa_column=Column(
             String(255),
-            unique=True,
             nullable=False,
         )
     )

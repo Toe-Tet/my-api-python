@@ -2,7 +2,15 @@ from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
 
 
-class LoginUser(BaseModel):
+class LoginUserTenantResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    identifier: str
+
+
+class LoginUserUserResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -10,8 +18,10 @@ class LoginUser(BaseModel):
     email: EmailStr
     phone: str
     is_active: bool
+    tenant_id: str
     created_at: datetime
     updated_at: datetime | None
+    tenant: LoginUserTenantResult
 
 
 class LoginUserResult(BaseModel):
@@ -19,4 +29,4 @@ class LoginUserResult(BaseModel):
 
     token: str
     expires_at: int
-    user: LoginUser
+    user: LoginUserUserResult

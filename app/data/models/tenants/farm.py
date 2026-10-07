@@ -18,16 +18,12 @@ class Farm(TenantSQLModel, table=True):
         sa_column=Column(
             String(100),
             nullable=False,
-            unique=True,
         )
     )
 
-    location: str | None = Field(
-        default=None,
-        sa_column=Column(
-            String(255),
-            nullable=True,
-        ),
+    is_active: bool = Field(
+        default=True,
+        nullable=False,
     )
 
     created_at: datetime = Field(

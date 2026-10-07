@@ -16,6 +16,7 @@ from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 
 password_hash = PasswordHash((Argon2Hasher(),))
+INVALID_LOGIN_MESSAGE = "Invalid tenant, email, or password"
 
 
 class AuthService:
@@ -29,17 +30,6 @@ class AuthService:
         tenant_identifier = tenant_service.build_tenant_identifier(
             normalized_tenant_name
         )
-
-        result = await session.exec(
-            select(User).where(User.email == register_user_payload.email)
-        )
-        existing_user = result.first()
-
-        if existing_user:
-            raise AppException(
-                message="Email already exists",
-                status_code=422,
-            )
 
         try:
             await tenant_store.get_by_identifier(tenant_identifier)
@@ -71,31 +61,38 @@ class AuthService:
             await session.commit()
             await session.refresh(user)
             return user
-        except Exception as exception:
+        except Exception:
             await tenant_service.rollback_failed_registration(session, tenant_id)
 
-            if isinstance(exception, AppException):
-                raise
-
-            raise tenant_service.build_register_exception(
-                exception,
-                tenant_identifier,
-            ) from exception
+            raise
 
     async def login_user(
         self,
         session: AsyncSession,
         login_user_payload: LoginUserPayload,
     ):
+        try:
+            tenant = await tenant_store.get_by_identifier(
+                login_user_payload.tenant_identifier
+            )
+        except TenantNotFoundError as exc:
+            raise AppException(
+                message="Tenant not found",
+                status_code=401,
+            ) from exc
+
         result = await session.exec(
-            select(User).where(User.email == login_user_payload.email)
+            select(User).where(
+                User.email == login_user_payload.email,
+                User.tenant_id == tenant.id,
+            )
         )
 
         user = result.first()
 
         if user is None:
             raise AppException(
-                message="Invalid email or password",
+                message=INVALID_LOGIN_MESSAGE,
                 status_code=401,
             )
 
@@ -104,7 +101,7 @@ class AuthService:
             user.password,
         ):
             raise AppException(
-                message="Invalid email or password",
+                message=INVALID_LOGIN_MESSAGE,
                 status_code=401,
             )
 
@@ -114,13 +111,19 @@ class AuthService:
                 status_code=403,
             )
 
-        # Generate your JWT here
-        token, expires_at = jwt_service.create_access_token(user.id)
+        token, expires_at = jwt_service.create_access_token(user.id, user.tenant_id)
 
         return {
             "token": token,
             "expires_at": expires_at,
-            "user": user,
+            "user": {
+                **user.model_dump(),
+                "tenant": {
+                    "id": tenant.id,
+                    "name": tenant.name,
+                    "identifier": tenant.identifier,
+                },
+            },
         }
 
 

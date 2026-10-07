@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.exceptions import HTTPException, RequestValidationError
+from fastapi.exceptions import RequestValidationError
 from fastapi_tenancy.middleware.tenancy import TenancyMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -46,8 +46,10 @@ app.add_middleware(
         "/openapi/v2.json",
         "/api/v1/auth/register",
         "/api/v1/auth/login",
+        "/api/v1/tenancy",
         "/api/v2/auth/register",
         "/api/v2/auth/login",
+        "/api/v2/tenancy",
     ],
 )
 

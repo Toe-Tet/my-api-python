@@ -1,14 +1,19 @@
 import logging
 import re
+from collections.abc import AsyncIterator
+from typing import Annotated
 
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.core.exceptions.app_exception import AppException
-from app.core.tenancy import tenancy_manager
-from fastapi_tenancy.core.exceptions import TenancyError
-from fastapi_tenancy.migrations.manager import MigrationError
+from app.core.services.jwt_service import jwt_service
+from app.core.tenancy import tenant_store, tenancy_manager
+from fastapi_tenancy.core.exceptions import TenantNotFoundError
 from fastapi_tenancy.utils.validation import validate_tenant_identifier
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+http_bearer = HTTPBearer(auto_error=False)
 
 
 class TenantService:
@@ -62,35 +67,42 @@ class TenantService:
         if tenant_id is not None:
             await self.cleanup_registered_tenant(tenant_id)
 
-    def build_register_exception(
-        self,
-        exception: Exception,
-        tenant_identifier: str,
-    ) -> AppException:
-        if isinstance(exception, ValueError):
-            return AppException(
-                message=str(exception),
-                status_code=422,
-            )
 
-        if isinstance(exception, (MigrationError, TenancyError)):
-            logger.exception(
-                "Failed to provision tenant '%s' through fastapi-tenancy",
-                tenant_identifier,
-            )
-            return AppException(
-                message="Unable to provision tenant",
-                status_code=500,
-            )
+async def get_current_tenant_from_jwt(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(http_bearer),
+    ],
+):
+    if credentials is None:
+        raise AppException(
+            message="Authentication required",
+            status_code=401,
+        )
 
-        logger.exception(
-            "Failed to register tenant '%s'",
-            tenant_identifier,
+    payload = jwt_service.decode_access_token(credentials.credentials)
+    tenant_id = payload.get("tenant_id")
+
+    if not isinstance(tenant_id, str) or not tenant_id:
+        raise AppException(
+            message="Invalid access token",
+            status_code=401,
         )
-        return AppException(
-            message="Unable to register user",
-            status_code=500,
-        )
+
+    try:
+        return await tenant_store.get_by_id(tenant_id)
+    except TenantNotFoundError as exc:
+        raise AppException(
+            message="Tenant not found",
+            status_code=401,
+        ) from exc
+
+
+async def get_tenant_db_from_jwt(
+    tenant: Annotated[object, Depends(get_current_tenant_from_jwt)],
+) -> AsyncIterator[AsyncSession]:
+    async with tenancy_manager.isolation_provider.get_session(tenant) as session:
+        yield session
 
 
 tenant_service = TenantService()

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import Column, DateTime, String
 from sqlmodel import Field
 
 from app.data.models.tenants.base import TenantSQLModel
@@ -14,26 +14,16 @@ class Farmer(TenantSQLModel, table=True):
         primary_key=True,
     )
 
-    farm_id: int = Field(
-        sa_column=Column(
-            ForeignKey("farms.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-    )
-
-    full_name: str = Field(
+    name: str = Field(
         sa_column=Column(
             String(100),
             nullable=False,
         )
     )
 
-    phone: str | None = Field(
-        default=None,
-        sa_column=Column(
-            String(50),
-            nullable=True,
-        ),
+    is_active: bool = Field(
+        default=True,
+        nullable=False,
     )
 
     created_at: datetime = Field(
